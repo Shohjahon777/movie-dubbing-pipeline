@@ -24,12 +24,19 @@ class TranslationRequest(BaseModel):
     emotion: str = "neutral"  # Currently unused, reserved for future use
 
 
-def load_translation_model(model_dir: str, device: str):
-    """Load NLLB translation model with memory optimizations"""
+def load_translation_model(model_dir: str, device: str, force_reload: bool = False):
+    """Load NLLB translation model with memory optimizations (lazy loading)"""
     global translation_model, translation_tokenizer
     
+    # Skip if already loaded (unless force_reload)
+    if translation_model is not None and translation_tokenizer is not None and not force_reload:
+        logger.info("Translation model already loaded")
+        return translation_model
+    
     try:
-        model_name = "facebook/nllb-200-3.3B"
+        # Use smaller model to fit in memory (600M instead of 3.3B)
+        # Still supports 200 languages including Uzbek
+        model_name = "facebook/nllb-200-distilled-600M"
         logger.info(f"Loading translation model: {model_name} (optimized for memory)")
         
         cache_dir = os.path.join(model_dir, "transformers")
@@ -81,6 +88,19 @@ async def translate_text(request: TranslationRequest):
     Returns:
         JSON with translated text
     """
+    # Lazy load model on first request to save startup memory
+    if translation_model is None or translation_tokenizer is None:
+        logger.info("Translation model not loaded, loading now...")
+        # Get config from environment (same as app.py)
+        model_dir = os.getenv("MODEL_CACHE_DIR", "./models")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        load_translation_model(model_dir, device)
+        # Clean up memory after loading
+        import gc
+        gc.collect()
+        if device == "cuda":
+            torch.cuda.empty_cache()
+    
     if translation_model is None or translation_tokenizer is None:
         raise HTTPException(status_code=503, detail="Translation model not loaded")
     

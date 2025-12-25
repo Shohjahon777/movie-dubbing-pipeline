@@ -58,12 +58,10 @@ async def lifespan(app: FastAPI):
         if DEVICE == "cuda":
             torch.cuda.empty_cache()
         
-        logger.info("Loading translation model...")
-        models["translate"] = load_translation_model(MODEL_DIR, DEVICE)
-        logger.info("✓ Translation model loaded")
-        gc.collect()
-        if DEVICE == "cuda":
-            torch.cuda.empty_cache()
+        # Skip translation model at startup - will lazy load on first request
+        # This saves memory as it's the largest model (~2GB for 600M version)
+        logger.info("Skipping translation model at startup (will lazy load on first request)")
+        models["translate"] = None  # Mark as not loaded yet
         
         logger.info("Loading emotion model...")
         models["emotion"] = load_emotion_model(MODEL_DIR, DEVICE)
@@ -137,10 +135,13 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    # Filter out None values (lazy-loaded models not yet loaded)
+    loaded_models = {k: "loaded" if v is not None else "pending" 
+                     for k, v in models.items()}
     return {
         "status": "healthy",
         "device": DEVICE,
-        "models_loaded": list(models.keys())
+        "models": loaded_models
     }
 
 
