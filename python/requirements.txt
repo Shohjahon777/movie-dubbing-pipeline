@@ -12,6 +12,7 @@ sentencepiece==0.1.99
 soundfile==0.12.1
 tqdm==4.64.0
 numpy==1.22.0
+librosa==0.10.1
 opencv-python==4.8.0.76
 Pillow==10.0.0
 requests==2.31.0

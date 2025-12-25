@@ -26,7 +26,7 @@ class EmotionRequest(BaseModel):
 
 
 def load_emotion_model(model_dir: str, device: str):
-    """Load emotion detection model"""
+    """Load emotion detection model with memory optimizations"""
     global emotion_model, emotion_tokenizer
     
     try:
@@ -41,9 +41,11 @@ def load_emotion_model(model_dir: str, device: str):
             cache_dir=cache_dir
         )
         
+        # Memory-optimized loading
         emotion_model = AutoModelForSequenceClassification.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            low_cpu_mem_usage=True  # Reduces peak memory during loading
         ).to(device)
         
         emotion_model.eval()  # Set to evaluation mode
