@@ -20,7 +20,7 @@ translation_tokenizer = None
 class TranslationRequest(BaseModel):
     text: str
     source_lang: str = "eng_Latn"
-    target_lang: str = "uzb_Latn"  # or "uzb_Cyrl" for Cyrillic script
+    target_lang: str = "uzn_Latn"  # or "uzb_Cyrl" for Cyrillic script
     emotion: str = "neutral"  # Currently unused, reserved for future use
 
 
@@ -128,7 +128,7 @@ async def translate_text(request: TranslationRequest):
         
         # Define alternative code mappings for Uzbek
         uzbek_alternatives = {
-            'uzb_Latn': ['uzb_Latn', 'uzb', 'uz_Latn', 'uz', 'uzb_Latin'],
+            'uzn_Latn': ['uzn_Latn', 'uzb', 'uz_Latn', 'uz', 'uzb_Latin'],
             'uzb_Cyrl': ['uzb_Cyrl', 'uz_Cyrl', 'uzb_Cyrillic']
         }
         
