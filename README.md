@@ -2,7 +2,7 @@ w# Movie Dubbing Pipeline
 
 A complete video dubbing pipeline that translates English videos to Uzbek using local ML models. The system transcribes audio, translates text, detects emotions, generates voice-cloned speech, and syncs lip movements - all running locally without API costs.
 
-## Features
+## Features![1766660648910](image/README/1766660648910.png)![1766660662065](image/README/1766660662065.png)
 
 - **Local Processing**: All models run locally (no API costs)
 - **GPU Support**: Optimized for CUDA-enabled GPUs with CPU fallback
