@@ -5,6 +5,7 @@ Provides endpoints for transcription, translation, emotion detection, TTS, and l
 
 import os
 import sys
+import gc
 import torch
 import logging
 from pathlib import Path
@@ -48,27 +49,42 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("CUDA not available, using CPU (will be slower)")
     
-    # Load models
+    # Load models with memory cleanup between loads
     try:
         logger.info("Loading Whisper model...")
         models["whisper"] = load_whisper_model(MODEL_DIR, DEVICE)
         logger.info("✓ Whisper model loaded")
+        gc.collect()
+        if DEVICE == "cuda":
+            torch.cuda.empty_cache()
         
         logger.info("Loading translation model...")
         models["translate"] = load_translation_model(MODEL_DIR, DEVICE)
         logger.info("✓ Translation model loaded")
+        gc.collect()
+        if DEVICE == "cuda":
+            torch.cuda.empty_cache()
         
         logger.info("Loading emotion model...")
         models["emotion"] = load_emotion_model(MODEL_DIR, DEVICE)
         logger.info("✓ Emotion model loaded")
+        gc.collect()
+        if DEVICE == "cuda":
+            torch.cuda.empty_cache()
         
         logger.info("Loading TTS model...")
         models["tts"] = load_tts_model(MODEL_DIR, DEVICE)
         logger.info("✓ TTS model loaded")
+        gc.collect()
+        if DEVICE == "cuda":
+            torch.cuda.empty_cache()
         
         logger.info("Loading lip-sync model...")
         models["lipsync"] = load_lipsync_model(MODEL_DIR)
         logger.info("✓ Lip-sync model loaded")
+        gc.collect()
+        if DEVICE == "cuda":
+            torch.cuda.empty_cache()
         
         logger.info("All models loaded successfully!")
     except Exception as e:

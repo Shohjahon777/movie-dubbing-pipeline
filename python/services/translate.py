@@ -25,12 +25,12 @@ class TranslationRequest(BaseModel):
 
 
 def load_translation_model(model_dir: str, device: str):
-    """Load NLLB translation model"""
+    """Load NLLB translation model with memory optimizations"""
     global translation_model, translation_tokenizer
     
     try:
         model_name = "facebook/nllb-200-3.3B"
-        logger.info(f"Loading translation model: {model_name}")
+        logger.info(f"Loading translation model: {model_name} (optimized for memory)")
         
         cache_dir = os.path.join(model_dir, "transformers")
         os.makedirs(cache_dir, exist_ok=True)
@@ -40,10 +40,27 @@ def load_translation_model(model_dir: str, device: str):
             cache_dir=cache_dir
         )
         
+        # Memory-optimized loading
+        load_kwargs = {
+            "cache_dir": cache_dir,
+            "low_cpu_mem_usage": True,  # Reduces peak memory during loading
+        }
+        
+        # For CUDA, use device_map for automatic device placement
+        if device == "cuda":
+            load_kwargs["device_map"] = "auto"
+        
         translation_model = AutoModelForSeq2SeqLM.from_pretrained(
             model_name,
-            cache_dir=cache_dir
-        ).to(device)
+            **load_kwargs
+        )
+        
+        # Move to device if not using device_map
+        if device != "cuda" or "device_map" not in load_kwargs:
+            translation_model = translation_model.to(device)
+        
+        # Set to evaluation mode to save memory
+        translation_model.eval()
         
         logger.info("Translation model loaded successfully")
         return translation_model
