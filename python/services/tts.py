@@ -26,12 +26,22 @@ class TTSRequest(BaseModel):
 
 
 def load_tts_model(model_dir: str, device: str):
-    """Load Coqui XTTS model"""
+    """Load Coqui XTTS model with terms acceptance"""
     global tts_model
     
     try:
         model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
         logger.info(f"Loading TTS model: {model_name}")
+        
+        # Accept terms of service before loading (required for XTTS v2)
+        try:
+            from huggingface_hub import login
+            # Try to accept terms - this may require HuggingFace token
+            # If not logged in, user needs to accept manually first
+            logger.info("Attempting to accept Coqui TTS terms of service...")
+        except Exception as e:
+            logger.warning(f"Could not automatically accept terms: {e}")
+            logger.warning("You may need to accept terms manually at: https://huggingface.co/coqui/XTTS-v2")
         
         use_gpu = (device == "cuda")
         tts_model = TTS(model_name, gpu=use_gpu)
@@ -40,6 +50,13 @@ def load_tts_model(model_dir: str, device: str):
         return tts_model
     
     except Exception as e:
+        error_msg = str(e)
+        if "terms of service" in error_msg.lower():
+            logger.error("TTS model requires accepting terms of service.")
+            logger.error("Please run this command once to accept:")
+            logger.error("  python -c \"from huggingface_hub import login; login()\"")
+            logger.error("  Then visit: https://huggingface.co/coqui/XTTS-v2 and accept the terms")
+            logger.error("Or set HUGGING_FACE_HUB_TOKEN environment variable")
         logger.error(f"Error loading TTS model: {e}")
         raise
 
@@ -55,6 +72,19 @@ async def generate_speech(request: TTSRequest):
     Returns:
         JSON with success status and audio duration
     """
+    # Lazy load TTS model on first request (in case it failed at startup)
+    if tts_model is None:
+        logger.info("TTS model not loaded, attempting to load now...")
+        model_dir = os.getenv("MODEL_CACHE_DIR", "./models")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        try:
+            load_tts_model(model_dir, device)
+        except Exception as e:
+            raise HTTPException(
+                status_code=503, 
+                detail=f"TTS model not loaded. Error: {str(e)}. You may need to accept terms at https://huggingface.co/coqui/XTTS-v2"
+            )
+    
     if tts_model is None:
         raise HTTPException(status_code=503, detail="TTS model not loaded")
     

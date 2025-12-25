@@ -70,9 +70,14 @@ async def lifespan(app: FastAPI):
         if DEVICE == "cuda":
             torch.cuda.empty_cache()
         
+        # Try to load TTS model, but don't fail startup if terms not accepted
         logger.info("Loading TTS model...")
-        models["tts"] = load_tts_model(MODEL_DIR, DEVICE)
-        logger.info("✓ TTS model loaded")
+        try:
+            models["tts"] = load_tts_model(MODEL_DIR, DEVICE)
+            logger.info("✓ TTS model loaded")
+        except Exception as e:
+            logger.warning(f"TTS model failed to load (will lazy-load on first request): {e}")
+            models["tts"] = None  # Mark as not loaded yet
         gc.collect()
         if DEVICE == "cuda":
             torch.cuda.empty_cache()
