@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  dubbing-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: dubbing-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/app/data
+      - ../models:/app/models
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_CACHE_DIR=/app/models
+      - API_PORT=8000
+      - INPUT_DIR=/app/data/input
+      - OUTPUT_DIR=/app/data/output
+      - TEMP_DIR=/app/data/temp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - dubbing-network
+
+networks:
+  dubbing-network:
+    driver: bridge
